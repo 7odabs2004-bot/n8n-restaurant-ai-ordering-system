@@ -1,0 +1,910 @@
+{
+  "name": "restaurant full system",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        0
+      ],
+      "id": "c34007b5-dcf6-4667-a74a-857c6555674e",
+      "name": "Telegram Trigger",
+      "webhookId": "REPLACE_WITH_WEBHOOK_ID",
+      "credentials": {
+        "telegramApi": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "REPLACE_WITH_CREDENTIAL_NAME"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.message.text }}",
+        "options": {
+          "systemMessage": "=You are an intent classification AI for a restaurant Telegram chatbot.\n\nYour ONLY task is to classify the user's message into one of the following intents.\n\nPossible intents:\n\n- order\n- restaurant_question\n- feedback\n\nDefinitions:\n\norder:\nThe customer wants to place, modify, or cancel an order.\n\nExamples:\n- I want a burger.\n- Two burgers with cheese.\n- Add fries.\n- Remove the drink.\n- I want to order.\n\nrestaurant_question:\nThe customer is asking about the restaurant, menu, prices, opening hours, location, delivery, payment methods, ingredients, or offers.\n\nExamples:\n- What is your menu?\n- How much is the burger?\n- Do you deliver?\n- Where are you located?\n- What are your working hours?\n\nfeedback:\nThe customer is giving a review, compliment, complaint, or sharing their experience.\n\nExamples:\n- The food was delicious.\n- The burger was cold.\n- Delivery was late.\n- Excellent service.\n- I didn't like the fries.\n\nIf the message looks like customer information such as a name, phone number, address, confirmation (yes, okay, confirm), or any continuation of a previous order conversation, classify it as order.\n\nRules:\n\n- Return ONLY one of these values:\norder\nrestaurant_question\nfeedback\n\n- Do not explain your answer.\n- Do not return JSON.\n- Do not return markdown.\n- Do not return punctuation.\n- Do not return any extra text.\n- If unsure, choose the closest matching intent."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        192,
+        0
+      ],
+      "id": "89adb7a5-6cd3-427d-b79a-7ce1418923eb",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": "google/gemma-4-26b-a4b-it:free",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        144,
+        176
+      ],
+      "id": "cb52ffbe-9785-4364-b63e-c109d3ff7934",
+      "name": "OpenRouter Chat Model",
+      "credentials": {
+        "openRouterApi": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "REPLACE_WITH_CREDENTIAL_NAME"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "contextWindowLength": 15
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.4,
+      "position": [
+        272,
+        208
+      ],
+      "id": "efcbc1f0-3aed-4651-8dea-dd0572de4478",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.output }}",
+                    "rightValue": "order",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "f3dac52d-5a53-4d92-8043-9750ab45aab1"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "order"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "7a010d2a-1a93-4226-8311-f1d2cacb9435",
+                    "leftValue": "={{ $json.output }}",
+                    "rightValue": "restaurant_question",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "restaurant question"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "36557328-7540-4009-9efa-3d7b0fba2f18",
+                    "leftValue": "={{ $json.output }}",
+                    "rightValue": "feedback",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "feedback"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        528,
+        -16
+      ],
+      "id": "31a65b1a-c719-4edf-a3e2-9f131b9773a9",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('Telegram Trigger').item.json.message.text }}",
+        "options": {
+          "systemMessage": "=You are a professional AI restaurant assistant communicating with customers through Telegram.\n\nYour goal is to help customers in a friendly, professional, and natural way.\n\nYou have access to the following tools:\n\n1. Get Menu\nPurpose:\nRetrieve the restaurant menu, prices, and item availability.\n\nUse this tool whenever:\n- The customer asks about the menu.\n- The customer asks about prices.\n- The customer wants to place an order.\n- You need to verify that an item exists.\n- You need to calculate the total price.\n\n--------------------------------------------------\n\n2. Create Order ID\n\nPurpose:\nGenerate a unique Order ID.\n\nUse this tool ONLY after the customer confirms the order.\n\n--------------------------------------------------\n\n3. Create Order\n\nPurpose:\nSave a new order in the Orders Google Sheet.\n\nFields:\n\n- Order ID\n- Customer Name\n- Phone\n- Items\n- Price\n- Status\n\nUse this tool ONLY after:\n- The customer confirms the order.\n- An Order ID has been generated.\n\n--------------------------------------------------\n\n4. Create Feedback\n\nPurpose:\nSave customer feedback in the Feedback Google Sheet.\n\nFields:\n\n- Feedback\n- Sentiment\n\n--------------------------------------------------\n\n5. Cancel Order\n\nPurpose:\nUpdate an existing order.\n\nRequired:\n\n- Order ID\n\nUpdate ONLY:\n\nStatus = Canceled\n\n--------------------------------------------------\nGENERAL RULES\n\n- Always be friendly and professional.\n- Keep the conversation natural.\n- Never mention tools.\n- Never mention Google Sheets.\n- Never expose internal operations.\n- Never output JSON.\n- Never invent information.\n- If required information is missing, ask for it politely.\n- Never use a tool unless it is required.\n\n--------------------------------------------------\nORDER WORKFLOW\n\nWhen the customer wants to place an order:\n\n1. Use the Get Menu tool.\n2. Verify that all requested items exist.\n3. Calculate the total price using the menu prices.\n4. If an item is unavailable, politely inform the customer and suggest available alternatives if appropriate.\n5. If customer information is missing, collect:\n   - Customer Name\n   - Phone Number\n6. Show the customer an order summary.\n\nExample:\n\nOrder Summary\n\nItems:\n2 × Burger\n1 × Cola\n\nTotal Price:\n185 EGP\n\nCustomer:\nMahmoud\n\nPhone:\n01012345678\n\nAsk:\n\n\"Is everything correct?\"\n\nDO NOT create the order yet.\n\nOnly after the customer confirms:\n\n1. Use Create Order ID.\n2. Use Create Order.\n\nFill the order fields exactly as follows:\n\nOrder ID:\nGenerated Order ID\n\nCustomer Name:\nCustomer's name\n\nPhone:\nCustomer's phone number\n\nItems:\nComplete order with quantities\n\nPrice:\nCalculated total price\n\nDate:\nCurrent date and time\n\nStatus:\nIn Kitchen\n\nAfter the order has been saved successfully, reply:\n\n✅ Your order has been placed successfully.\n\nYour Order ID is: <generated_order_id>\n\nPlease keep your Order ID if you need to cancel your order later.\n\n--------------------------------------------------\nMENU QUESTIONS\n\nWhenever the customer asks about:\n\n- Menu\n- Prices\n- Available food\n- Drinks\n\nUse the Get Menu tool and answer using the returned information.\n\nNever guess prices.\n\n--------------------------------------------------\nFEEDBACK\n\nIf the customer provides feedback:\n\nDetermine whether the feedback is:\n\n- Positive\n- Negative\n\nUse Create Feedback.\n\nFill:\n\nFeedback:\nCustomer's feedback\n\nSentiment:\nPositive or Negative\n\nDate:\nCurrent date and time\n\nThen politely thank the customer.\n\n--------------------------------------------------\nCANCEL ORDER\n\nIf the customer wants to cancel an order:\n\nIf the Order ID is missing:\n\nAsk the customer for the Order ID.\n\nOnce the Order ID is available:\n\nUse Cancel Order.\n\nUpdate ONLY:\n\nStatus = Canceled\n\nThen reply:\n\n✅ Your order has been canceled successfully.\n\n--------------------------------------------------\n\nAlways choose the correct tool for the customer's request.\n\nUse only the tools required to complete the task.\n\nIf no tool is needed, simply answer the customer naturally."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        1168,
+        -16
+      ],
+      "id": "c691726e-7092-45b0-bd66-401e2bc2d714",
+      "name": "AI Agent1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "8bc7b20e-0ebc-4d91-9263-e0e4052a02ee",
+              "name": "order prompt",
+              "value": "={{ $json.output }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        816,
+        -240
+      ],
+      "id": "8b7d9422-823b-4ce5-a6a7-e1009b36e775",
+      "name": "order prompt"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ffdcf3fa-ed3a-4b06-bf75-045b73fa32ca",
+              "name": "restaurant question prompt",
+              "value": "={{ $json.output }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        800,
+        -16
+      ],
+      "id": "3fe49fb7-01dd-4369-812a-e048e1315c58",
+      "name": "restaurant question prompt"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ffdcf3fa-ed3a-4b06-bf75-045b73fa32ca",
+              "name": "feedback prompt",
+              "value": "={{ $json.output }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        800,
+        176
+      ],
+      "id": "620dadf0-73d8-4f51-bffd-01ee9c007331",
+      "name": "feedback prompt"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "contextWindowLength": 10
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.4,
+      "position": [
+        1168,
+        240
+      ],
+      "id": "36ad5cf2-33aa-488e-94b5-5d7e4ca3c839",
+      "name": "Simple Memory1"
+    },
+    {
+      "parameters": {
+        "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        1040,
+        224
+      ],
+      "id": "7e87eeca-7597-4744-9ad5-e1c7784cf9a3",
+      "name": "OpenRouter Chat Model1",
+      "credentials": {
+        "openRouterApi": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "REPLACE_WITH_CREDENTIAL_NAME"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "={{ $json.output }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1584,
+        -16
+      ],
+      "id": "c490beb9-1196-4dab-bda2-edee4eb1e9fb",
+      "name": "Send a text message",
+      "webhookId": "REPLACE_WITH_WEBHOOK_ID",
+      "credentials": {
+        "telegramApi": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "REPLACE_WITH_CREDENTIAL_NAME"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "7oda res orders",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/REPLACE_WITH_GOOGLE_SHEET_ID/edit"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/REPLACE_WITH_GOOGLE_SHEET_ID/edit"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Status": "Canceled",
+            "Order ID": "={{ $fromAI('order_id') }}"
+          },
+          "matchingColumns": [
+            "Order ID"
+          ],
+          "schema": [
+            {
+              "id": "Order ID",
+              "displayName": "Order ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Customer Name",
+              "displayName": "Customer Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Phone",
+              "displayName": "Phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Items",
+              "displayName": "Items",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Price",
+              "displayName": "Price",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        1328,
+        432
+      ],
+      "id": "1df02034-7085-4045-bef0-4128e17ce149",
+      "name": "Cancel Order",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "REPLACE_WITH_CREDENTIAL_NAME"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "7oda res orders",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/REPLACE_WITH_GOOGLE_SHEET_ID/edit"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/REPLACE_WITH_GOOGLE_SHEET_ID/edit"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Order ID": "={{ $fromAI('order_id') }}",
+            "Customer Name": "={{ $fromAI('customer_name') }}",
+            "Phone": "={{ $fromAI('phone') }}",
+            "Items": "={{ $fromAI('items') }}",
+            "Price": "={{ $fromAI('price') }}",
+            "Date": "={{ $now }}",
+            "Status": "In Kitchen"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Order ID",
+              "displayName": "Order ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Customer Name",
+              "displayName": "Customer Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Phone",
+              "displayName": "Phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Items",
+              "displayName": "Items",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Price",
+              "displayName": "Price",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        1728,
+        304
+      ],
+      "id": "530cc635-9146-47a4-91da-4dcc4a7b341b",
+      "name": "Create Order",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "REPLACE_WITH_CREDENTIAL_NAME"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "7oda res orders",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/REPLACE_WITH_GOOGLE_SHEET_ID/edit"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/REPLACE_WITH_GOOGLE_SHEET_ID/edit"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Order ID",
+              "lookupValue": "={{ $fromAI('order_id') }}"
+            },
+            {
+              "lookupColumn": "Status",
+              "lookupValue": "In Progress"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        1600,
+        368
+      ],
+      "id": "6b780a38-a884-477a-8604-848db6cf964f",
+      "name": "Order Status",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "REPLACE_WITH_CREDENTIAL_NAME"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "7oda res Menu",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/REPLACE_WITH_GOOGLE_SHEET_ID/edit"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/REPLACE_WITH_GOOGLE_SHEET_ID/edit"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        1856,
+        256
+      ],
+      "id": "b3fcc85e-7d0b-4905-915e-4563995e9f2e",
+      "name": "Get Menu",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "REPLACE_WITH_CREDENTIAL_NAME"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "7oda res feedback",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/REPLACE_WITH_GOOGLE_SHEET_ID/edit"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/REPLACE_WITH_GOOGLE_SHEET_ID/edit"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Feedback": "={{ $fromAI('feedback') }}",
+            "Sentiment": "={{ $fromAI('sentiment') }}",
+            "Date": "={{ $now  }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Feedback",
+              "displayName": "Feedback",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Sentiment",
+              "displayName": "Sentiment",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        1472,
+        400
+      ],
+      "id": "c8a572b1-e29b-43db-b05f-49d4b3daf345",
+      "name": "Feedbacks",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "REPLACE_WITH_CREDENTIAL_NAME"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "order prompt",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "restaurant question prompt",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "feedback prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent1": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "order prompt": {
+      "main": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "restaurant question prompt": {
+      "main": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "feedback prompt": {
+      "main": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory1": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cancel Order": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Order": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Order Status": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Menu": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Feedbacks": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "REPLACE_WITH_VERSION_ID",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "REPLACE_WITH_INSTANCE_ID"
+  },
+  "nodeGroups": [],
+  "id": "REPLACE_WITH_WORKFLOW_ID",
+  "tags": []
+}
